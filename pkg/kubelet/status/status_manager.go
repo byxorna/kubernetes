@@ -163,7 +163,7 @@ func (m *manager) Start() {
 		case syncRequest := <-m.podStatusChannel:
 			klog.V(5).Infof("Status Manager: syncing pod: %q, with status: (%d, %v) from podStatusChannel",
 				syncRequest.podUID, syncRequest.status.version, syncRequest.status.status)
-			m.syncPod(syncRequest.podUID, syncRequest.status)
+			m.syncPod(syncRequest.podUID, syncRequest.status, true)
 		case <-syncTicker:
 			m.syncBatch()
 		}
@@ -507,13 +507,13 @@ func (m *manager) syncBatch() {
 
 	for _, update := range updatedStatuses {
 		klog.V(5).Infof("Status Manager: syncPod in syncbatch. pod UID: %q", update.podUID)
-		m.syncPod(update.podUID, update.status)
+		m.syncPod(update.podUID, update.status, false)
 	}
 }
 
 // syncPod syncs the given status with the API server. The caller must not hold the lock.
-func (m *manager) syncPod(uid types.UID, status versionedPodStatus) {
-	if !m.needsUpdate(uid, status) {
+func (m *manager) syncPod(uid types.UID, status versionedPodStatus, checkNeedsUpdate bool) {
+	if checkNeedsUpdate && !m.needsUpdate(uid, status) {
 		klog.V(1).Infof("Status for pod %q is up-to-date; skipping", uid)
 		return
 	}
